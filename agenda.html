@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda de Compromissos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .container:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #007bff;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            transition: background-color 0.3s;
+        }
+
+        li:last-child {
+            border-bottom: none;
+        }
+
+        li:hover {
+            background-color: #f1f1f1;
+        }
+
+        li .remove {
+            cursor: pointer;
+            color: #ff0000;
+            align-self: flex-end;
+        }
+
+        .fas {
+            margin-right: 5px;
+        }
+
+        .meeting-link {
+            display: none;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            input, select, textarea {
+                font-size: 0.9em;
+                padding: 8px;
+            }
+
+            button {
+                font-size: 0.9em;
+                padding: 8px 12px;
+            }
+
+            li {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="painel.html" class="back-button"><i class="fas fa-arrow-left"></i> Voltar</a>
+        <h1>Agenda de Compromissos</h1>
+        <form id="appointment-form">
+            <input type="text" id="appointment" placeholder="Digite o compromisso" required>
+            <input type="datetime-local" id="datetime" required>
+            <select id="mode" required>
+                <option value="" disabled selected>Selecione o tipo de apresentação</option>
+                <option value="Presencial">Presencial</option>
+                <option value="Online">Online</option>
+            </select>
+            <input type="text" id="link" placeholder="Link da reunião" class="meeting-link">
+            <textarea id="description" placeholder="Descrição" rows="3"></textarea>
+            <button type="submit"><i class="fas fa-plus"></i> Adicionar</button>
+        </form>
+        <ul id="appointment-list"></ul>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('appointment-form');
+            const appointmentList = document.getElementById('appointment-list');
+            const modeSelect = document.getElementById('mode');
+            const linkInput = document.getElementById('link');
+
+            modeSelect.addEventListener('change', function() {
+                if (modeSelect.value === 'Online') {
+                    linkInput.style.display = 'block';
+                } else {
+                    linkInput.style.display = 'none';
+                }
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const appointmentInput = document.getElementById('appointment');
+                const datetimeInput = document.getElementById('datetime');
+                const modeSelect = document.getElementById('mode');
+                const linkInput = document.getElementById('link');
+                const descriptionInput = document.getElementById('description');
+
+                const appointment = appointmentInput.value.trim();
+                const datetime = formatDateTime(datetimeInput.value);
+                const mode = modeSelect.value;
+                const link = linkInput.value.trim();
+                const description = descriptionInput.value.trim();
+
+                if (appointment && datetime && mode) {
+                    addAppointment({ appointment, datetime, mode, link, description });
+                    appointmentInput.value = '';
+                    datetimeInput.value = '';
+                    modeSelect.value = '';
+                    linkInput.value = '';
+                    descriptionInput.value = '';
+                }
+            });
+
+            function addAppointment(appointment) {
+                const appointments = getAppointments();
+                appointments.push(appointment);
+                localStorage.setItem('appointments', JSON.stringify(appointments));
+                renderAppointments();
+            }
+
+            function removeAppointment(index) {
+                const appointments = getAppointments();
+                appointments.splice(index, 1);
+                localStorage.setItem('appointments', JSON.stringify(appointments));
+                renderAppointments();
+            }
+
+            function getAppointments() {
+                const appointments = localStorage.getItem('appointments');
+                return appointments ? JSON.parse(appointments) : [];
+            }
+
+            function renderAppointments() {
+                appointmentList.innerHTML = '';
+                const appointments = getAppointments();
+
+                appointments.forEach((appointment, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${appointment.appointment}</strong> 
+                                    <br>${appointment.datetime} 
+                                    <br>${appointment.mode} 
+                                    ${appointment.mode === 'Online' ? `<br><a href="${appointment.link}" target="_blank">${appointment.link}</a>` : ''}
+                                    <br>${appointment.description}
+                                    <span class="remove" title="Remover"><i class="fas fa-trash-alt"></i></span>`;
+                    li.querySelector('.remove').addEventListener('click', function() {
+                        removeAppointment(index);
+                    });
+                    appointmentList.appendChild(li);
+                });
+            }
+
+            function formatDateTime(datetime) {
+                const [date, time] = datetime.split('T');
+                const [year, month, day] = date.split('-');
+                return `${day}/${month}/${year} ${time}`;
+            }
+
+            renderAppointments();
+        });
+    </script>
+</body>
+</html>
